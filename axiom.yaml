@@ -1,0 +1,137 @@
+name: christiangeorgelucas/tokenizer-tools
+version: 0.1.0
+language: typescript
+author: Christian George Lucas
+license: MIT
+description: >-
+  Deterministic BPE tokenization for LLM context-window management: count,
+  encode, decode, truncate, chunk, and budget-check text against tiktoken's
+  cl100k_base/o200k_base/p50k_base/p50k_edit/r50k_base/gpt2 encodings, plus
+  model-name resolution (gpt-4o, gpt-4, gpt-3.5-turbo, o1, gpt-5, and other
+  OpenAI model names) and per-message chat-token accounting (the standard
+  "num_tokens_from_messages" overhead calculation). Wraps js-tiktoken (MIT),
+  a pure-JavaScript port of OpenAI's tiktoken whose encoding rank tables ship
+  bundled inside the npm package as offline data files — no native
+  dependency, no runtime network fetch, fully deterministic. Every node is a
+  pure single-input to single-output transform: no state, no randomness, no
+  wall-clock dependence.
+nodes:
+    - name: CountTokens
+      description: >-
+        Count how many BPE tokens `text` encodes to under an explicit
+        encoding (cl100k_base, o200k_base, p50k_base, p50k_edit, r50k_base,
+        or gpt2). The direct building block for sizing text against a model's
+        context window when you already know which encoding the target model
+        uses. Text over 1 MiB, invalid UTF-8, a missing encoding, or an
+        unrecognized encoding name returns a structured error instead of a
+        count.
+      input: TextEncodingRequest
+      output: CountResult
+    - name: CountTokensForModel
+      description: >-
+        Count how many BPE tokens `text` encodes to for a named OpenAI model
+        (e.g. "gpt-4o", "gpt-4", "gpt-3.5-turbo", "text-embedding-3-large"),
+        resolving the model name to its encoding internally via
+        js-tiktoken's own model table so callers never need to know the
+        encoding themselves. Also returns which encoding was resolved. An
+        unrecognized model name, a missing model, or text over 1 MiB / not
+        valid UTF-8 returns a structured error instead of a count.
+      input: TextModelRequest
+      output: CountForModelResult
+    - name: Encode
+      description: >-
+        Encode `text` into its ordered array of BPE token IDs under an
+        explicit encoding — the raw building block behind every other
+        counting/truncation/chunking node here, and useful directly when a
+        caller needs the actual token IDs (e.g. to send a pre-tokenized
+        prompt, or to inspect exactly where a model's tokenizer splits the
+        text). Decoding the returned token_ids under the same encoding
+        reproduces the original text exactly. Text over 1 MiB, invalid
+        UTF-8, a missing encoding, or an unrecognized encoding name returns a
+        structured error.
+      input: TextEncodingRequest
+      output: EncodeResult
+    - name: Decode
+      description: >-
+        Decode an array of BPE token IDs back into text under an explicit
+        encoding — the inverse of Encode. Every ID is validated against the
+        resolved encoding's actual vocabulary before decoding: an ID outside
+        that vocabulary returns a structured INVALID_TOKEN_ID error rather
+        than the underlying js-tiktoken library's own behavior of silently
+        dropping unrecognized IDs from the output (verified directly against
+        the library during authoring — decoding a mix of one valid and one
+        invalid ID silently returns only the valid token's text with no
+        error). More than 200,000 token_ids, or a missing/unrecognized
+        encoding, also returns a structured error.
+      input: DecodeRequest
+      output: DecodeResult
+    - name: Truncate
+      description: >-
+        Cut `text` down to at most `max_tokens` tokens under an explicit
+        encoding, returning the truncated text plus exactly how many tokens
+        and UTF-16 characters were dropped — the standard "make this fit the
+        context window" operation. Returns the original text unchanged
+        (truncated=false, both dropped counts 0) when it already fits.
+        Truncation always keeps a token-boundary-aligned prefix (never splits
+        a token's bytes). A negative max_tokens, text over 1 MiB, invalid
+        UTF-8, or a missing/unrecognized encoding returns a structured error.
+      input: TruncateRequest
+      output: TruncateResult
+    - name: FitsBudget
+      description: >-
+        Check whether `text` fits within a token budget in one call —
+        returns both the boolean fits/doesn't-fit verdict and the actual
+        token count, so a caller doesn't need a separate CountTokens call
+        just to compare against a limit. A negative max_tokens, text over 1
+        MiB, invalid UTF-8, or a missing/unrecognized encoding returns a
+        structured error.
+      input: FitsBudgetRequest
+      output: FitsBudgetResult
+    - name: ChunkText
+      description: >-
+        Split `text` into an ordered sequence of chunks, each at most
+        `max_tokens_per_chunk` tokens under an explicit encoding — the
+        standard document-chunking operation for feeding long text into an
+        embedding or RAG pipeline in size-bounded pieces. Chunk boundaries
+        align to token boundaries (never split mid-token); concatenating the
+        returned chunks' text reproduces the original text's token sequence
+        exactly. Empty text yields zero chunks (not an error). A chunk size
+        below 1, text over 1 MiB, invalid UTF-8, or a missing/unrecognized
+        encoding returns a structured error.
+      input: ChunkTextRequest
+      output: ChunkTextResult
+    - name: CountChatTokens
+      description: >-
+        Count how many tokens a chat-message array (role/name/content per
+        message) would cost for a named model, implementing OpenAI's
+        documented "num_tokens_from_messages" accounting: each message's
+        content tokens, plus the model family's fixed per-message overhead,
+        plus a per-message adjustment when `name` is set, plus the fixed
+        per-reply priming tokens every chat completion adds — not just the
+        sum of each message's raw content token count, which undercounts the
+        real request. This is the sizing calculation agents need before
+        sending a chat request to stay under a model's context limit. More
+        than 500 messages, an oversized message/request, or a
+        missing/unrecognized model returns a structured error.
+      input: ChatTokensRequest
+      output: ChatTokensResult
+    - name: ListEncodings
+      description: >-
+        List every BPE encoding this package supports (cl100k_base,
+        o200k_base, p50k_base, p50k_edit, r50k_base, gpt2), each with a
+        representative sample of the model names known to map to it — a
+        directory node for discovering what's available without needing to
+        already know tiktoken's encoding names. Takes no input.
+      input: ListEncodingsRequest
+      output: ListEncodingsResult
+    - name: GetEncodingForModel
+      description: >-
+        Resolve a named OpenAI model (e.g. "gpt-4o", "gpt-4",
+        "text-davinci-003") to the BPE encoding it uses (e.g. "o200k_base",
+        "cl100k_base", "p50k_base"), without tokenizing any text — useful
+        when a caller needs to know which encoding a model uses ahead of
+        time, e.g. to pick the right encoding for a separate Encode/Decode
+        call. A missing or unrecognized model name returns a structured
+        error.
+      input: ModelRequest
+      output: EncodingForModelResult
