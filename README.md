@@ -7,7 +7,7 @@ encode, decode, truncate, chunk, and budget-check text against tiktoken's
 `gpt-3.5-turbo`, `o1`, `gpt-5`, and other OpenAI model names) and
 per-message chat-token accounting (the standard `num_tokens_from_messages`
 overhead calculation agents need to size a chat request). Built for the
-[Axiom](https://axiom.dev) marketplace (handle `christiangeorgelucas`).
+[Axiom](https://axiomide.com) marketplace (handle `christiangeorgelucas`).
 
 ## Nodes
 
