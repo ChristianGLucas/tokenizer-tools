@@ -9,7 +9,7 @@ import { resolveEncoding, validateText } from './helpers';
  * boundaries align to token boundaries (never split mid-token);
  * concatenating the returned chunks' text reproduces the original text's
  * token sequence exactly. Empty text yields zero chunks (not an error). A
- * chunk size below 1, text over 1 MiB, invalid UTF-8, or a
+ * chunk size below 1, invalid UTF-8, or a
  * missing/unrecognized encoding returns a structured error.
  */
 export function chunkText(ax: AxiomContext, input: ChunkTextRequest): ChunkTextResult {

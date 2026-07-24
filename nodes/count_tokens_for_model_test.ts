@@ -48,9 +48,10 @@ describe('CountTokensForModel', () => {
     expect(result.getEncoding()).toBe('');
   });
 
-  it('text over the 1 MiB cap returns TEXT_TOO_LARGE', () => {
-    const huge = 'a'.repeat(1_048_577);
-    const result = countTokensForModel(testContext, req(huge, 'gpt-4o'));
-    expect(result.getError()).toBe('TEXT_TOO_LARGE');
+  it('counts a large input without crashing (no payload-size limit)', () => {
+    const large = 'a'.repeat(1_048_577);
+    const result = countTokensForModel(testContext, req(large, 'gpt-4o'));
+    expect(result.getError()).toBe('');
+    expect(result.getCount()).toBeGreaterThan(0);
   });
 });

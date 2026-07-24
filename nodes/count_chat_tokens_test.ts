@@ -90,19 +90,21 @@ describe('CountChatTokens', () => {
     expect(result.getCount()).toBe(3 + 1 + 1 + 3);
   });
 
-  it('more than 500 messages returns TOO_MANY_MESSAGES', () => {
+  it('counts a large message array without crashing (no element-count limit)', () => {
     const messages: ChatMessage[] = [];
     for (let i = 0; i < 501; i++) {
       messages.push(msg('user', 'hi'));
     }
     const result = countChatTokens(testContext, req(messages, 'gpt-4o'));
-    expect(result.getError()).toBe('TOO_MANY_MESSAGES');
+    expect(result.getError()).toBe('');
+    expect(result.getCount()).toBeGreaterThan(0);
   });
 
-  it('a single message over the 1 MiB cap returns MESSAGE_TOO_LARGE', () => {
+  it('counts a single large message without crashing (no payload-size limit)', () => {
     const messages = [msg('user', 'a'.repeat(1_048_577))];
     const result = countChatTokens(testContext, req(messages, 'gpt-4o'));
-    expect(result.getError()).toBe('MESSAGE_TOO_LARGE');
+    expect(result.getError()).toBe('');
+    expect(result.getCount()).toBeGreaterThan(0);
   });
 
   it('missing model returns MISSING_MODEL', () => {

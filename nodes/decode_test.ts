@@ -58,10 +58,11 @@ describe('Decode', () => {
     expect(result.getError()).toBe('INVALID_TOKEN_ID');
   });
 
-  it('more than 200,000 token_ids returns TOO_MANY_TOKENS', () => {
-    const tooMany = new Array(200_001).fill(9906);
-    const result = decode(testContext, req(tooMany, 'cl100k_base'));
-    expect(result.getError()).toBe('TOO_MANY_TOKENS');
+  it('decodes a large token_ids array without crashing (no element-count limit)', () => {
+    const many = new Array(200_001).fill(9906);
+    const result = decode(testContext, req(many, 'cl100k_base'));
+    expect(result.getError()).toBe('');
+    expect(result.getText().length).toBeGreaterThan(0);
   });
 
   it('missing encoding returns MISSING_ENCODING', () => {

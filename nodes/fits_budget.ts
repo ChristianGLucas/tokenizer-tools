@@ -5,7 +5,7 @@ import { resolveEncoding, validateText } from './helpers';
 /**
  * Check whether `text` fits within a token budget in one call — returns
  * both the boolean fits/doesn't-fit verdict and the actual token count. A
- * negative max_tokens, text over 1 MiB, invalid UTF-8, or a
+ * negative max_tokens, invalid UTF-8, or a
  * missing/unrecognized encoding returns a structured error.
  */
 export function fitsBudget(ax: AxiomContext, input: FitsBudgetRequest): FitsBudgetResult {

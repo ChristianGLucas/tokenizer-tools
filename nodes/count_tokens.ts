@@ -5,7 +5,7 @@ import { resolveEncoding, validateText } from './helpers';
 /**
  * Count how many BPE tokens `text` encodes to under an explicit encoding
  * (cl100k_base, o200k_base, p50k_base, p50k_edit, r50k_base, gpt2). Text
- * over 1 MiB, invalid UTF-8, a missing encoding, or an unrecognized
+ * invalid UTF-8, a missing encoding, or an unrecognized
  * encoding name returns a structured error instead of a count.
  */
 export function countTokens(ax: AxiomContext, input: TextEncodingRequest): CountResult {

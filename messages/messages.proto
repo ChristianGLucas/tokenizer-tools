@@ -42,13 +42,10 @@
 // an out-of-range or unmapped ID is a structured error (INVALID_TOKEN_ID),
 // never a silently-truncated result.
 //
-// SIZE BOUNDS. `text` fields are capped at 1 MiB (1,048,576 bytes) of UTF-8;
-// oversized or invalid-UTF-8 input is a structured error (TEXT_TOO_LARGE /
-// INVALID_UTF8), never a crash. `token_ids` arrays are capped at 200,000
-// entries (TOO_MANY_TOKENS). Chat message arrays are capped at 500 messages,
-// each message's fields following the same 1 MiB text cap, with a combined
-// 4 MiB request cap (TOO_MANY_MESSAGES / MESSAGE_TOO_LARGE). Every cap is
-// checked on the raw input before any parsing or encoding work happens.
+// No payload-size or element-count limit is imposed on `text` fields,
+// `token_ids` arrays, or chat message arrays — the platform bounds
+// resource use, not this package. Invalid-UTF-8 input is a structured
+// error (INVALID_UTF8), never a crash.
 //
 // DETERMINISM. BPE tokenization is a pure function of (text, encoding) with
 // no randomness or wall-clock dependence; every node here is a deterministic
@@ -64,7 +61,7 @@ option go_package = ".;gen";
 // Text plus an explicit BPE encoding name — the input to every node that
 // operates against a named encoding directly (as opposed to a model name).
 message TextEncodingRequest {
-  // The text to tokenize. At most 1 MiB of UTF-8. Empty text is valid input
+  // The text to tokenize. Empty text is valid input
   // (tokenizes to zero tokens), not an error.
   string text = 1;
   // The BPE encoding to use: "cl100k_base" | "o200k_base" | "p50k_base" |
@@ -77,14 +74,14 @@ message CountResult {
   // Number of tokens `text` encodes to under `encoding`.
   int32 count = 1;
   // Structured error code (MISSING_ENCODING, UNKNOWN_ENCODING,
-  // TEXT_TOO_LARGE, INVALID_UTF8); empty on success.
+  // INVALID_UTF8); empty on success.
   string error = 2;
 }
 
 // Text plus a named model — the input to nodes that resolve a model name to
 // its encoding rather than taking the encoding directly.
 message TextModelRequest {
-  // The text to tokenize. At most 1 MiB of UTF-8.
+  // The text to tokenize.
   string text = 1;
   // An OpenAI model name, e.g. "gpt-4o", "gpt-4", "gpt-3.5-turbo",
   // "text-embedding-3-large". Required.
@@ -98,7 +95,7 @@ message CountForModelResult {
   // The encoding name resolved from `model` (e.g. "o200k_base"). Empty on
   // error.
   string encoding = 2;
-  // Structured error code (MISSING_MODEL, UNKNOWN_MODEL, TEXT_TOO_LARGE,
+  // Structured error code (MISSING_MODEL, UNKNOWN_MODEL,
   // INVALID_UTF8); empty on success.
   string error = 3;
 }
@@ -111,13 +108,13 @@ message EncodeResult {
   // Convenience count; equal to the length of token_ids.
   int32 count = 2;
   // Structured error code (MISSING_ENCODING, UNKNOWN_ENCODING,
-  // TEXT_TOO_LARGE, INVALID_UTF8); empty on success.
+  // INVALID_UTF8); empty on success.
   string error = 3;
 }
 
 // Input for Decode: turn an array of BPE token IDs back into text.
 message DecodeRequest {
-  // Token IDs to decode, in order. At most 200,000 entries.
+  // Token IDs to decode, in order.
   repeated int32 token_ids = 1;
   // The BPE encoding the IDs were produced under. Required — decoding under
   // the wrong encoding silently yields garbage text (a BPE ID has no
@@ -131,7 +128,7 @@ message DecodeResult {
   // The reassembled text.
   string text = 1;
   // Structured error code (MISSING_ENCODING, UNKNOWN_ENCODING,
-  // TOO_MANY_TOKENS, INVALID_TOKEN_ID); empty on success. INVALID_TOKEN_ID
+  // INVALID_TOKEN_ID); empty on success. INVALID_TOKEN_ID
   // fires when any id in token_ids is not a valid token under `encoding`
   // (see the file-level TOKEN-ID VALIDATION note) — reported instead of the
   // underlying library's silent drop-and-continue behavior.
@@ -140,7 +137,7 @@ message DecodeResult {
 
 // Input for Truncate: cut text down to fit a maximum token budget.
 message TruncateRequest {
-  // The text to (possibly) truncate. At most 1 MiB of UTF-8.
+  // The text to (possibly) truncate.
   string text = 1;
   // The BPE encoding to measure against. Required.
   string encoding = 2;
@@ -165,14 +162,14 @@ message TruncateResult {
   // original text (0 when not truncated).
   int32 chars_dropped = 5;
   // Structured error code (MISSING_ENCODING, UNKNOWN_ENCODING,
-  // TEXT_TOO_LARGE, INVALID_UTF8, NEGATIVE_MAX_TOKENS); empty on success.
+  // INVALID_UTF8, NEGATIVE_MAX_TOKENS); empty on success.
   string error = 6;
 }
 
 // Input for FitsBudget: check whether text fits within a token budget
 // without needing the caller to separately call CountTokens and compare.
 message FitsBudgetRequest {
-  // The text to measure. At most 1 MiB of UTF-8.
+  // The text to measure.
   string text = 1;
   // The BPE encoding to measure against. Required.
   string encoding = 2;
@@ -187,14 +184,14 @@ message FitsBudgetResult {
   // The text's actual token count under `encoding`.
   int32 count = 2;
   // Structured error code (MISSING_ENCODING, UNKNOWN_ENCODING,
-  // TEXT_TOO_LARGE, INVALID_UTF8, NEGATIVE_MAX_TOKENS); empty on success.
+  // INVALID_UTF8, NEGATIVE_MAX_TOKENS); empty on success.
   string error = 3;
 }
 
 // Input for ChunkText: split text into token-budget-bounded pieces, e.g. for
 // feeding a document into an embedding/RAG pipeline in size-bounded pieces.
 message ChunkTextRequest {
-  // The text to split. At most 1 MiB of UTF-8.
+  // The text to split.
   string text = 1;
   // The BPE encoding to measure against. Required.
   string encoding = 2;
@@ -219,7 +216,7 @@ message ChunkTextResult {
   // zero chunks (not an error).
   repeated TextChunk chunks = 1;
   // Structured error code (MISSING_ENCODING, UNKNOWN_ENCODING,
-  // TEXT_TOO_LARGE, INVALID_UTF8, INVALID_CHUNK_SIZE); empty on success.
+  // INVALID_UTF8, INVALID_CHUNK_SIZE); empty on success.
   string error = 2;
 }
 
@@ -233,7 +230,7 @@ message ChatMessage {
   // Optional participant name (OpenAI's chat format allows naming a
   // participant distinct from its role). Empty when unused.
   string name = 2;
-  // The message's text content. At most 1 MiB of UTF-8.
+  // The message's text content.
   string content = 3;
 }
 
@@ -241,8 +238,7 @@ message ChatMessage {
 // API actually bills it, including its per-message/per-name overhead — not
 // just the sum of each message's raw content token count.
 message ChatTokensRequest {
-  // The conversation, in order. At most 500 messages; combined request at
-  // most 4 MiB.
+  // The conversation, in order.
   repeated ChatMessage messages = 1;
   // An OpenAI chat model name, e.g. "gpt-4o", "gpt-3.5-turbo". Required —
   // the per-message/per-name token overhead is model-family-specific.
@@ -258,8 +254,8 @@ message ChatTokensResult {
   int32 count = 1;
   // The encoding name resolved from `model`.
   string encoding = 2;
-  // Structured error code (MISSING_MODEL, UNKNOWN_MODEL, TOO_MANY_MESSAGES,
-  // MESSAGE_TOO_LARGE, REQUEST_TOO_LARGE, INVALID_UTF8); empty on success.
+  // Structured error code (MISSING_MODEL, UNKNOWN_MODEL, INVALID_UTF8);
+  // empty on success.
   string error = 3;
 }
 

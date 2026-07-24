@@ -1,13 +1,11 @@
 import { getEncoding, getEncodingNameForModel, Tiktoken } from 'js-tiktoken';
 
 // ---------------------------------------------------------------------------
-// Shared bounds. Checked on the raw input before any parsing/encoding work.
+// Payload size and element-count limits are the platform's job, not this
+// package's — no node here imposes a byte-size or count cap. What remains
+// below are domain-correctness checks (a token ID that isn't valid under
+// the encoding, text that isn't valid UTF-16/UTF-8).
 // ---------------------------------------------------------------------------
-export const MAX_TEXT_BYTES = 1_048_576; // 1 MiB
-export const MAX_TOKEN_IDS = 200_000;
-export const MAX_CHAT_MESSAGES = 500;
-export const MAX_MESSAGE_BYTES = 1_048_576; // 1 MiB per message
-export const MAX_CHAT_REQUEST_BYTES = 4 * 1_048_576; // 4 MiB combined
 
 export const SUPPORTED_ENCODINGS = [
   'cl100k_base',
@@ -115,14 +113,11 @@ export function hasInvalidUtf16(s: string): boolean {
   return false;
 }
 
-// Validate `text` against the shared size/encoding bounds. Returns an error
-// code, or '' when text is valid.
+// Validate `text` against the encoding requirements. Returns an error code,
+// or '' when text is valid.
 export function validateText(text: string): string {
   if (hasInvalidUtf16(text)) {
     return 'INVALID_UTF8';
-  }
-  if (utf8ByteLength(text) > MAX_TEXT_BYTES) {
-    return 'TEXT_TOO_LARGE';
   }
   return '';
 }

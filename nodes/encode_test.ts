@@ -56,9 +56,10 @@ describe('Encode', () => {
     expect(result.getError()).toBe('UNKNOWN_ENCODING');
   });
 
-  it('text over the 1 MiB cap returns TEXT_TOO_LARGE', () => {
-    const huge = 'a'.repeat(1_048_577);
-    const result = encode(testContext, req(huge, 'cl100k_base'));
-    expect(result.getError()).toBe('TEXT_TOO_LARGE');
+  it('encodes a large input without crashing (no payload-size limit)', () => {
+    const large = 'a'.repeat(1_048_577);
+    const result = encode(testContext, req(large, 'cl100k_base'));
+    expect(result.getError()).toBe('');
+    expect(result.getCount()).toBeGreaterThan(0);
   });
 });

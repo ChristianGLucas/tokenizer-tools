@@ -4,10 +4,6 @@ import {
   resolveModel,
   resolveChatOverhead,
   hasInvalidUtf16,
-  utf8ByteLength,
-  MAX_CHAT_MESSAGES,
-  MAX_MESSAGE_BYTES,
-  MAX_CHAT_REQUEST_BYTES,
 } from './helpers';
 
 /**
@@ -20,36 +16,19 @@ import {
  * message's raw content token count, which undercounts the real request.
  * Covers chat-completion model families with documented overhead
  * (gpt-3.5-turbo, gpt-4, gpt-4-32k, gpt-4o, gpt-4o-mini); a model without
- * that documented accounting returns UNKNOWN_MODEL. More than 500 messages,
- * an oversized message/request, or a missing model also returns a
- * structured error.
+ * that documented accounting returns UNKNOWN_MODEL. A missing model also
+ * returns a structured error.
  */
 export function countChatTokens(ax: AxiomContext, input: ChatTokensRequest): ChatTokensResult {
   const result = new ChatTokensResult();
   const messages = input.getMessagesList();
   const model = input.getModel();
 
-  if (messages.length > MAX_CHAT_MESSAGES) {
-    result.setError('TOO_MANY_MESSAGES');
-    return result;
-  }
-
-  let totalBytes = 0;
   for (const m of messages) {
     if (hasInvalidUtf16(m.getRole()) || hasInvalidUtf16(m.getName()) || hasInvalidUtf16(m.getContent())) {
       result.setError('INVALID_UTF8');
       return result;
     }
-    const msgBytes = utf8ByteLength(m.getRole()) + utf8ByteLength(m.getName()) + utf8ByteLength(m.getContent());
-    if (msgBytes > MAX_MESSAGE_BYTES) {
-      result.setError('MESSAGE_TOO_LARGE');
-      return result;
-    }
-    totalBytes += msgBytes;
-  }
-  if (totalBytes > MAX_CHAT_REQUEST_BYTES) {
-    result.setError('REQUEST_TOO_LARGE');
-    return result;
   }
 
   if (!model) {

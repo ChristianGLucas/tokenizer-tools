@@ -73,10 +73,11 @@ describe('CountTokens', () => {
     expect(result.getError()).toBe('UNKNOWN_ENCODING');
   });
 
-  it('text over the 1 MiB cap returns TEXT_TOO_LARGE instead of hanging on a huge encode', () => {
-    const huge = 'a'.repeat(1_048_577);
-    const result = countTokens(testContext, req(huge, 'cl100k_base'));
-    expect(result.getError()).toBe('TEXT_TOO_LARGE');
+  it('counts a large input without crashing (no payload-size limit)', () => {
+    const large = 'a'.repeat(1_048_577);
+    const result = countTokens(testContext, req(large, 'cl100k_base'));
+    expect(result.getError()).toBe('');
+    expect(result.getCount()).toBeGreaterThan(0);
   });
 
   it('an unpaired UTF-16 surrogate returns INVALID_UTF8 rather than mangled output', () => {

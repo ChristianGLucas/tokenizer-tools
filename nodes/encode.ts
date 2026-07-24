@@ -5,7 +5,7 @@ import { resolveEncoding, validateText } from './helpers';
 /**
  * Encode `text` into its ordered array of BPE token IDs under an explicit
  * encoding. Decoding the returned token_ids under the same encoding (via
- * Decode) reproduces the original text exactly. Text over 1 MiB, invalid
+ * Decode) reproduces the original text exactly. Invalid
  * UTF-8, a missing encoding, or an unrecognized encoding name returns a
  * structured error.
  */

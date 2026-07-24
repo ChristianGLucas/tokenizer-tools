@@ -8,7 +8,7 @@ import { resolveEncoding, validateText } from './helpers';
  * UTF-16 characters were dropped. Returns the original text unchanged
  * (truncated=false, both dropped counts 0) when it already fits.
  * Truncation always keeps a token-boundary-aligned prefix (never splits a
- * token's bytes). A negative max_tokens, text over 1 MiB, invalid UTF-8, or
+ * token's bytes). A negative max_tokens, invalid UTF-8, or
  * a missing/unrecognized encoding returns a structured error.
  */
 export function truncate(ax: AxiomContext, input: TruncateRequest): TruncateResult {
